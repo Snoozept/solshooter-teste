@@ -1,0 +1,24 @@
+# Joins the parts of the PC program (files over 100 MB can't live in git) and puts them on the "pc" release,
+# so the download links stay the same: releases/download/pc/SolShoot-Windows.zip etc.
+name: PC program release
+on:
+  push:
+    branches: [pc]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Join the parts and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -d parts ] || { echo "no parts, nothing to do"; exit 0; }
+          mkdir out
+          for f in SolShoot-Windows SolShoot-Mac-AppleSilicon SolShoot-Mac-Intel; do cat parts/$f.zip.part* > out/$f.zip; unzip -tq out/$f.zip; done
+          gh release delete pc --cleanup-tag -y -R "$GITHUB_REPOSITORY" || true
+          gh release create pc out/*.zip -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --latest \
+            --title "SolShoot para PC (Windows e macOS)" \
+            --notes "Programa de teste para Windows e macOS. Depois de instalado atualiza-se sozinho dentro do jogo."
